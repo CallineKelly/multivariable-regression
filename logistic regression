@@ -1,0 +1,109 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+# Load CSV data with error handling
+try:
+    data = pd.read_csv('C:\\Users\\User\\Documents\\semester 4\\knowledge dicovery\\heart disease dataset - Sheet1.csv')
+except FileNotFoundError:
+    print("The file was not found. Please check the path and try again.")
+    exit()
+
+# Print the column names to verify
+print("Column names in the dataset:")
+print(data.columns)
+
+# Define features and target variables directly since encoding is already done
+X = data[['Age', 'Sex', 'Chest pain type(0:Typical angina 1:Atypical angina 2:Non-anginal pain 3:Asymptomatic)',
+          'Blood pressure', 'Cholestoral (mg/dl)', 'Max heart rate',
+          'Blood sugar(0 for <120 mg/dl, 1 for >120 mg/dl)']]
+y = data['Diagnose']
+
+# Define a function to train and evaluate the model
+def train_and_evaluate(X_train, X_test, y_train, y_test):
+    model = LogisticRegression(max_iter=1000)
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    print(f'Accuracy: {accuracy_score(y_test, y_pred)}')
+    print(f'Precision: {precision_score(y_test, y_pred)}')
+    print(f'Recall: {recall_score(y_test, y_pred)}')
+    print(f'F1 Score: {f1_score(y_test, y_pred)}')
+    return model
+
+# Split the data into training and testing sets with different proportions
+splits = [(0.3, '70/30'), (0.2, '80/20'), (0.1, '90/10')]
+final_model = None
+for test_size, split_name in splits:
+    print(f'\nTraining and evaluating model with a {split_name} split:')
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+    final_model = train_and_evaluate(X_train, X_test, y_train, y_test)
+
+# Function to prompt for new event values
+def get_binary_input(prompt):
+    while True:
+        try:
+            value = input(prompt)
+            if value.lower() == 'exit':
+                return 'exit'
+            value = int(value)
+            if value in [0, 1]:
+                return value
+            else:
+                print("Please enter 0 or 1.")
+        except ValueError:
+            print("Please enter a valid integer.")
+
+def get_chest_pain_input(prompt):
+    while True:
+        try:
+            value = input(prompt)
+            if value.lower() == 'exit':
+                return 'exit'
+            value = int(value)
+            if value in [0, 1, 2, 3,4]:
+                return value
+            else:
+                print("Please enter 0, 1, 2, 3 or 4.")
+        except ValueError:
+            print("Please enter a valid integer.")
+
+def prompt_new_event(model):
+    while True:  # Start an infinite loop
+        age_input = input('Enter age or type "exit" to quit: ')
+        if age_input.lower() == 'exit':
+            break
+        try:
+            age = int(age_input)  # Convert the input to an integer
+        except ValueError:
+            print("Please enter a valid integer for age.")
+            continue
+        sex = get_binary_input('Enter sex (0 for female, 1 for male): ')
+        if sex == 'exit':
+            break
+        chest_pain_type = get_chest_pain_input('Enter chest pain type (0, 1, 2, 3, 4): ')
+        if chest_pain_type == 'exit':
+            break
+        try:
+            blood_pressure = int(input('Enter blood pressure: '))
+            cholesterol = int(input('Enter cholesterol level (1g/dl): '))
+            max_heart_rate = int(input('Enter max heart rate: '))
+        except ValueError:
+            print("Please enter valid integers for blood pressure, cholesterol, and max heart rate.")
+            continue
+        blood_sugar = get_binary_input('Enter blood sugar (0 for <120 mg/dl, 1 for >120 mg/dl): ')
+        if blood_sugar == 'exit':
+            break
+
+        new_event = [age, sex, chest_pain_type, blood_pressure, cholesterol, max_heart_rate, blood_sugar]
+        new_event_reshaped = np.array(new_event).reshape(1, -1)
+        prediction = model.predict(new_event_reshaped)
+
+        if prediction[0] == 1:
+            print(f'Diagnosed with heart disease. Prediction value: {prediction[0]}')
+        else:
+            print(f'No heart disease diagnosed. Prediction value: {prediction[0]}')
+
+# Prompt for new event values using the final model
+prompt_new_event(final_model)
